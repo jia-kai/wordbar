@@ -9,13 +9,13 @@
     tools:context=".MainActivity" >
 
     <Button
-        android:id="@+id/yesBtn"
+        android:id="@+id/button1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true"
-        android:text="Explore"
         android:onClick="onExploreClick"
+        android:text="Explore"
         tools:ignore="HardcodedText" />
 
     <TextView
@@ -26,21 +26,65 @@
         android:layout_centerHorizontal="true"
         android:text="Good luck to all {G&amp;T}ers !" />
 
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignRight="@+id/button1"
+        android:layout_below="@+id/button1"
+        android:onClick="onReviewClicked"
+        android:text="Review" />
+
     <TextView
-        android:id="@+id/wordDefTextView"
+        android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/textView2"
         android:layout_centerHorizontal="true"
-        android:text="Dedicated to my beloved girlfriend. Elena" />
+        android:text="Hope we  defeat G&amp;T easily" />
+
+    <TextView
+        android:id="@+id/wordDefTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/textView1"
+        android:layout_centerHorizontal="true"
+        android:text="Dedicated to my beloved girlfriend, Elena" />
+
+    <ScrollView
+        android:id="@+id/scrollView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/wordDefTextView"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/button3"
+        android:scrollbars="horizontal|vertical" >
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <TextView
+                android:id="@+id/logTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+    </ScrollView>
 
     <Button
-        android:id="@+id/noBtn"
+        android:id="@+id/button3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:layout_alignRight="@+id/yesBtn"
-        android:layout_below="@+id/yesBtn"
-        android:text="Review" />
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/button2"
+        android:onClick="onAutoPlayClicked"
+        android:text="Auto Play" />
 
 </RelativeLayout>

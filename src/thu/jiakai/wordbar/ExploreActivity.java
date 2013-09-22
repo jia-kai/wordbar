@@ -14,14 +14,17 @@ public class ExploreActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_explore);
-		setCurWord(WordStorage.getFirtNewWord());
 		wordIDET = (EditText) findViewById(R.id.wordIDEditText);
+		setCurWord(WordStorage.getFirtNewWord());
 	}
 
 	private void setCurWord(Word w) {
 		curWord = w;
 		TextView titleTV = (TextView) findViewById(R.id.wordTitleTextView), transTV = (TextView) findViewById(R.id.wordDefTextView);
-		titleTV.setText(w.spell);
+		String spell = w.spell;
+		if (w.inReviewList)
+			spell += " [R]";
+		titleTV.setText(spell);
 		transTV.setText(w.definition);
 		wordIDET.setText(String.valueOf(w.id));
 	}
@@ -32,14 +35,23 @@ public class ExploreActivity extends Activity {
 	}
 
 	public void onPrevClicked(View view) {
-		setCurWord(WordStorage.getByID(curWord.id - 1));
+		gotoID(curWord.id - 1);
 	}
-	
+
 	public void onNextClicked(View view) {
-		setCurWord(WordStorage.getByID(curWord.id + 1));
+		gotoID(curWord.id + 1);
+	}
+
+	public void onAddToReviewClicked(View view) {
+		WordStorage.addToReviewSet(curWord);
+		gotoID(curWord.id + 1);
 	}
 	
-	public void onAddToReviewClicked(View view) {
-		WordStorage.setReviewFlag(curWord, 1);
+	private void gotoID(int id) {
+		if (id < 1)
+			id = WordStorage.getNrWord();
+		else if (id > WordStorage.getNrWord())
+			id = 1;
+		setCurWord(WordStorage.getByID(id));
 	}
 }

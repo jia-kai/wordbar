@@ -33,6 +33,10 @@
             android:name="thu.jiakai.wordbar.ReviewActivity"
             android:label="@string/title_activity_review" >
         </activity>
+        <activity
+            android:name="thu.jiakai.wordbar.AutoPlayActivity"
+            android:label="@string/title_activity_auto_play" >
+        </activity>
     </application>
 
 </manifest>

@@ -18,7 +18,7 @@
         android:text="&lt;-" />
 
     <Button
-        android:id="@+id/yesBtn"
+        android:id="@+id/button1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/showDefBtn"
@@ -28,7 +28,7 @@
         android:text="->" />
 
     <Button
-        android:id="@+id/noBtn"
+        android:id="@+id/button2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -40,9 +40,9 @@
         android:id="@+id/wordIDEditText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/noBtn"
-        android:layout_alignBottom="@+id/noBtn"
-        android:layout_toLeftOf="@+id/noBtn"
+        android:layout_alignBaseline="@+id/button2"
+        android:layout_alignBottom="@+id/button2"
+        android:layout_toLeftOf="@+id/button2"
         android:ems="3"
         android:inputType="number" >
 
@@ -63,7 +63,7 @@
         android:id="@+id/scrollView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/yesBtn"
+        android:layout_above="@+id/button1"
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true"
         android:layout_below="@+id/wordTitleTextView" >
@@ -78,7 +78,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="def"
-                android:textSize="20sp" />
+                android:textSize="16sp" />
         </LinearLayout>
     </ScrollView>
 
@@ -87,7 +87,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toRightOf="@+id/yesBtn"
+        android:layout_toRightOf="@+id/button1"
         android:onClick="onAddToReviewClicked"
         android:text="Add2Review" />
 

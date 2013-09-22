@@ -6,5 +6,6 @@
     <string name="hello_world">Hello world!</string>
     <string name="title_activity_explore">Explore New Word</string>
     <string name="title_activity_review">Review</string>
+    <string name="title_activity_auto_play">Auto Play</string>
 
 </resources>

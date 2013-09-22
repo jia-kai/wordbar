@@ -26,8 +26,9 @@
                 android:id="@+id/wordDefTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="def"
-                android:textSize="20sp" />
+                android:text="&lt;-- definition -->"
+                android:textSize="16sp" />
+
         </LinearLayout>
     </ScrollView>
 
@@ -51,7 +52,7 @@
         android:text="show def" />
 
     <Button
-        android:id="@+id/yesBtn"
+        android:id="@+id/button1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -60,11 +61,11 @@
         android:text="Yes" />
 
     <Button
-        android:id="@+id/noBtn"
+        android:id="@+id/button2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toRightOf="@+id/yesBtn"
+        android:layout_toRightOf="@+id/button1"
         android:onClick="onNoClicked"
         android:text="No" />
 

@@ -3,5 +3,6 @@
     <issue id="HardcodedText">
         <ignore path="res/layout/activity_explore.xml" />
         <ignore path="res/layout/activity_main.xml" />
+        <ignore path="res/layout/activity_review.xml" />
     </issue>
 </lint>
