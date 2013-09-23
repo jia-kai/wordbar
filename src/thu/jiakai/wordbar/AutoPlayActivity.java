@@ -6,11 +6,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Scanner;
 import java.util.TreeMap;
 
+import org.json.JSONArray;
+
 import android.app.Activity;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,10 +28,10 @@ import android.widget.Toast;
 
 public class AutoPlayActivity extends Activity {
 	private static final class FileChunk {
-		final int start, length, duration; // in milliseconds
+		final int offset, length, duration; // in milliseconds
 
-		public FileChunk(int s, int l, int d) {
-			start = s;
+		public FileChunk(int o, int l, int d) {
+			offset = o;
 			length = l;
 			duration = d;
 		}
@@ -36,7 +40,7 @@ public class AutoPlayActivity extends Activity {
 	ArrayList<Word> wordList;
 	int curIndex;
 	MediaPlayer mediaPlayer;
-	TreeMap<String, FileChunk> wordChunkMap;
+	TreeMap<Integer, FileChunk> wordChunkMap;
 	FileInputStream audioFile = null;
 	Handler handler;
 	int curEndTime;
@@ -85,10 +89,10 @@ public class AutoPlayActivity extends Activity {
 		Word w = wordList.get(curIndex);
 		((TextView) findViewById(R.id.wordTitleTextView)).setText(w.spell);
 		((TextView) findViewById(R.id.wordDefTextView)).setText(w.definition);
-		FileChunk chunk = wordChunkMap.get(w.spell);
+		FileChunk chunk = wordChunkMap.get(Integer.valueOf(w.id));
 		mediaPlayer.reset();
 		try {
-			mediaPlayer.setDataSource(audioFile.getFD(), chunk.start,
+			mediaPlayer.setDataSource(audioFile.getFD(), chunk.offset,
 					chunk.length);
 			mediaPlayer.prepare();
 		} catch (Exception e) {
@@ -99,6 +103,87 @@ public class AutoPlayActivity extends Activity {
 		}
 		mediaPlayer.start();
 		handler.postDelayed(stopAudioAndMoveToNext, chunk.duration);
+	}
+
+	private static class DBOpenHelper extends SQLiteOpenHelper {
+		private static final int DATABASE_VERSION = 1;
+		private static final String DATABASE_NAME = "cache";
+		private final Loader loader;
+		private final String mapFilePath;
+		boolean initSuccessful = true;
+
+		public DBOpenHelper(Context ctx, Loader loader, String mapFilePath) {
+			super(ctx, DATABASE_NAME, null, DATABASE_VERSION);
+			this.loader = loader;
+			this.mapFilePath = mapFilePath;
+		}
+
+		@Override
+		public void onCreate(SQLiteDatabase db) {
+			initSuccessful = false;
+			db.execSQL("CREATE TABLE `wordmap` "
+					+ "(`id` INTEGER PRIMAY KEY, `offset` INTEGER, `length` INTEGER, `duration` INTEGER)");
+
+			db.beginTransaction();
+			loader.pubProg("init cache database");
+			FileInputStream mapFile = null;
+			BufferedReader rd = null;
+			try {
+				mapFile = new FileInputStream(mapFilePath);
+				rd = new BufferedReader(new InputStreamReader(mapFile));
+				JSONArray json = new JSONArray(rd.readLine());
+				TreeMap<String, Integer> wordMap = new TreeMap<String, Integer>();
+				{
+					Cursor cursor = WordStorage.dbRead.rawQuery(
+							"SELECT `id`, `spell` FROM `words`", null);
+					while (cursor.moveToNext()) {
+						wordMap.put(cursor.getString(1),
+								Integer.valueOf(cursor.getInt(0)));
+					}
+				}
+				long prevReportTime = System.currentTimeMillis();
+				for (int num = 0; num < json.length(); num ++) {
+					{
+						long t = System.currentTimeMillis();
+						if (t - prevReportTime > 1000) {
+							prevReportTime = t;
+							loader.pubProg("loaded " + num);
+						}
+					}
+					JSONArray sub = json.getJSONArray(num);
+					Integer id = wordMap.get(sub.getString(0));
+					if (id != null) {
+						db.execSQL(String
+								.format("INSERT INTO `wordmap` VALUES (%d, %d, %d, %d)",
+										id.intValue(), sub.getInt(1), sub.getInt(2), sub.getInt(3)));
+					}
+				}
+				db.setTransactionSuccessful();
+				initSuccessful = true;
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			} finally {
+				db.endTransaction();
+				if (rd != null) {
+					try {
+						rd.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				if (mapFile != null) {
+					try {
+						mapFile.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+
+		@Override
+		public void onUpgrade(SQLiteDatabase arg0, int arg1, int arg2) {
+		}
 	}
 
 	private class Loader extends AsyncTask<Void, String, Void> {
@@ -134,6 +219,10 @@ public class AutoPlayActivity extends Activity {
 			return null;
 		}
 
+		void pubProg(String msg) {
+			publishProgress(msg);
+		}
+
 		private void loadAudio() {
 			loadSuccessful = false;
 			mediaPlayer = null;
@@ -141,8 +230,8 @@ public class AutoPlayActivity extends Activity {
 					.getAbsoluteFile() + "/wordbar");
 			if (!dataDir.isDirectory())
 				return;
-			FileInputStream mapFile = null;
-			BufferedReader rd = null;
+			DBOpenHelper dbHelper = null;
+			SQLiteDatabase db = null;
 			try {
 				publishProgress("loading audio ...");
 				audioFile = new FileInputStream(dataDir.getAbsolutePath()
@@ -152,59 +241,42 @@ public class AutoPlayActivity extends Activity {
 				mediaPlayer.prepare();
 
 				publishProgress("loading word offset map ...");
-				String[] word = new String[wordList.size()];
-				{
-					int p = 0;
-					for (Word w : wordList)
-						word[p ++] = w.spell;
-				}
-				Arrays.sort(word);
-				mapFile = new FileInputStream(dataDir.getAbsolutePath()
-						+ "/map.txt");
-				rd = new BufferedReader(new InputStreamReader(mapFile));
-				wordChunkMap = new TreeMap<String, AutoPlayActivity.FileChunk>();
+				dbHelper = new DBOpenHelper(AutoPlayActivity.this, this,
+						dataDir.getAbsolutePath() + "/map.json");
+				if (dbHelper.initSuccessful) {
+					db = dbHelper.getReadableDatabase();
+					StringBuilder query = new StringBuilder();
+					query.append("SELECT * FROM `wordmap` WHERE `id` IN (");
+					{
+						boolean first = true;
+						for (Word w : wordList) {
+							if (first)
+								first = false;
+							else
+								query.append(",");
 
-				for (String w : word) {
-					for (;;) {
-						String line = rd.readLine();
-						if (line == null) {
-							failMsg = "no word" + w;
-							return;
-						}
-
-						Scanner sc = new Scanner(line);
-						String cur_word = sc.next();
-						if (cur_word.equals(w)) {
-							int s, l, d;
-							s = sc.nextInt();
-							l = sc.nextInt();
-							d = sc.nextInt();
-							wordChunkMap.put(w, new FileChunk(s, l, d));
-							break;
+							query.append(w.id);
 						}
 					}
+					query.append(")");
+					Cursor cursor = db.rawQuery(query.toString(), null);
+					wordChunkMap = new TreeMap<Integer, AutoPlayActivity.FileChunk>();
+					while (cursor.moveToNext()) {
+						wordChunkMap.put(
+								Integer.valueOf(cursor.getInt(0)),
+								new FileChunk(cursor.getInt(1), cursor
+										.getInt(2), cursor.getInt(3)));
+					}
+					if (wordChunkMap.size() != wordList.size())
+						failMsg = "no data for some words";
+					else
+						loadSuccessful = true;
 				}
-
-				loadSuccessful = true;
-				return;
 			} catch (Exception exc) {
-				failMsg = "failed to load audio: caught exception: " + exc.toString();
+				failMsg = "failed to load audio: caught exception: "
+						+ exc.toString();
 				exc.printStackTrace();
 			} finally {
-				if (rd != null) {
-					try {
-						rd.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-				if (mapFile != null) {
-					try {
-						mapFile.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
 				if (!loadSuccessful) {
 					try {
 						audioFile.close();
@@ -214,6 +286,10 @@ public class AutoPlayActivity extends Activity {
 					mediaPlayer = null;
 					audioFile = null;
 				}
+				if (db != null)
+					db.close();
+				if (dbHelper != null)
+					dbHelper.close();
 			}
 		}
 	}

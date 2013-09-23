@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class ReviewActivity extends Activity {
 	Word curWord;
@@ -17,6 +18,12 @@ public class ReviewActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_review);
 		wordList = MemoryModel.getWordsToReview();
+		if (wordList.isEmpty()) {
+			Toast.makeText(this, "no words to review", Toast.LENGTH_LONG)
+					.show();
+			finish();
+			return;
+		}
 		Utils.randomShuffle(wordList);
 		wordIndex = -1;
 		moveToNextWord();
@@ -34,10 +41,7 @@ public class ReviewActivity extends Activity {
 			wordIndex = 0;
 			Utils.randomShuffle(wordList);
 		}
-		if (wordList.isEmpty()) {
-			curWord = Word.makeNone("no word to review");
-		} else
-			curWord = wordList.get(wordIndex);
+		curWord = wordList.get(wordIndex);
 		((TextView) findViewById(R.id.statusTextView)).setText(String.format(
 				"%d/%d", wordIndex, wordList.size()));
 		((TextView) findViewById(R.id.wordTitleTextView))

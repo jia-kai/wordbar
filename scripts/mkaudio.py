@@ -1,10 +1,11 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # $File: mkaudio.py
-# $Date: Mon Sep 23 11:16:38 2013 +0800
+# $Date: Mon Sep 23 19:01:56 2013 +0800
 # $Author: jiakai <jia.kai66@gmail.com>
 
 from libphonetic import get_phonetic
+from libtts import run_tts
 
 from scipy.io import wavfile
 import numpy as np
@@ -61,14 +62,17 @@ class AudioMaker(object):
 
 
     def __del__(self):
-        #os.unlink(self.temp_wav)
+        os.unlink(self.temp_wav)
         os.unlink(self.temp_ogg)
 
-    def load_word_audio(self, word):
-        text, fpath = get_phonetic(word)
+    def load_mp3(self, fpath):
         system_with_exc('mpg123 -q --single0 -r {} -w {} {}'.format(
             self.samplerate, self.temp_wav, fpath))
         return self.load_temp_wav()
+
+    def load_word_audio(self, word):
+        text, fpath = get_phonetic(word)
+        return self.load_mp3(fpath)
 
     def load_temp_wav(self):
         fs, data = wavfile.read(self.temp_wav)
@@ -83,15 +87,13 @@ class AudioMaker(object):
             text = i.sub('', text)
         for i in cls.TTS_RE_SPACE:
             text = i.sub(' ', text)
-        return text.strip().replace(' ', u'；')
+        return text.strip().replace(' ', u'，')
 
     def run_tts(self, text):
         text = self.get_tts_text(text)
         assert text
         print text
-        system_with_exc(u'espeak -v zh "{}" -w {} 2>/dev/null'.format(
-            text, self.temp_wav).encode('utf-8'))
-        return self.load_temp_wav()
+        return self.load_mp3(run_tts(text))
 
 
 if __name__ == '__main__':

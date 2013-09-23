@@ -26,11 +26,6 @@ public class WordStorage {
 		private static final String DATABASE_NAME = "words";
 		public boolean isNewlyCreated = false;
 
-		/*
-		 * db schema: id: integer data: text, Record.toString uploaded: integer,
-		 * whether this record has been uploaded to server
-		 */
-
 		public DBOpenHelper(Context ctx) {
 			super(ctx, DATABASE_NAME, null, DATABASE_VERSION);
 		}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # $File: convert.py
-# $Date: Mon Sep 23 11:08:40 2013 +0800
+# $Date: Mon Sep 23 13:25:24 2013 +0800
 # $Author: jiakai <jia.kai66@gmail.com>
 
 import re
@@ -18,7 +18,7 @@ from libphonetic import get_phonetic
 class Loader(object):
     word_re = re.compile(ur'^([a-z-]+)\s+\[.*\].*$', re.MULTILINE  | re.UNICODE)
     single_definition_re = re.compile(ur'【考[^】]*】\s*(.*)$', re.MULTILINE)
-    example_re = re.compile(ur'【例】([a-zA-Z /,.;]*)')
+    example_re = re.compile(ur'【例】(.*)$', re.MULTILINE)
     english_re = re.compile(ur"([a-zA-Z]+[a-zA-Z ;:,./()-_=+#$%，。'’]*)")
 
     word_list = None
@@ -87,7 +87,9 @@ class Loader(object):
             cur_detail = u'[{}:{}]{}'.format(idx + 1, chn, eng)
             s = self.example_re.search(extra)
             if s:
-                cur_detail += u' 例:{}'.format(s.group(1).strip())
+                s = s.group(1).strip()
+                s = re.sub(r'\s+', ' ', s)
+                cur_detail += u' 例:{}'.format(s)
             detail.append(cur_detail)
 
         if idx > 10:

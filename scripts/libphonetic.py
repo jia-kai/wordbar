@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # $File: libphonetic.py
-# $Date: Sun Sep 22 22:01:54 2013 +0800
+# $Date: Mon Sep 23 11:56:07 2013 +0800
 # $Author: jiakai <jia.kai66@gmail.com>
 
 import gevent
@@ -99,7 +99,7 @@ get_phonetic = LibPhonetic().get_phonetic
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        sys.exit('usage: {} <.json wordlist>'.format(sys.argv[0]))
+        sys.exit('usage: {} <text wordlist>'.format(sys.argv[0]))
 
     pool = Pool(100)
     with open(sys.argv[1]) as fin:
