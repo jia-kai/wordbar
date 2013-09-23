@@ -14,8 +14,10 @@ public class MainActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		TextView logTV = (TextView) findViewById(R.id.logTextView);
 		WordStorage.init(this, (ScrollView)findViewById(R.id.scrollView1),
-				(TextView) findViewById(R.id.logTextView));
+				logTV);
+		logTV.append("\nversion: bux fix #0\n");
 	}
 	
 	@Override

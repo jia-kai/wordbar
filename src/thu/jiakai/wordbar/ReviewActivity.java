@@ -18,12 +18,6 @@ public class ReviewActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_review);
 		wordList = MemoryModel.getWordsToReview();
-		if (wordList.isEmpty()) {
-			Toast.makeText(this, "no words to review", Toast.LENGTH_LONG)
-					.show();
-			finish();
-			return;
-		}
 		Utils.randomShuffle(wordList);
 		wordIndex = -1;
 		moveToNextWord();
@@ -36,6 +30,12 @@ public class ReviewActivity extends Activity {
 	}
 
 	private void moveToNextWord() {
+		if (wordList.isEmpty()) {
+			Toast.makeText(this, "no words to review", Toast.LENGTH_LONG)
+					.show();
+			finish();
+			return;
+		}
 		wordIndex += 1;
 		if (wordIndex >= wordList.size()) {
 			wordIndex = 0;
