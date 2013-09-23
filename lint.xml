@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <lint>
     <issue id="HardcodedText">
+        <ignore path="res/layout/activity_auto_play.xml" />
         <ignore path="res/layout/activity_explore.xml" />
         <ignore path="res/layout/activity_main.xml" />
         <ignore path="res/layout/activity_review.xml" />

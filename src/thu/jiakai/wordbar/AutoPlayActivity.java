@@ -6,10 +6,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Scanner;
 import java.util.TreeMap;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import android.app.Activity;
 import android.media.MediaPlayer;
@@ -71,8 +70,10 @@ public class AutoPlayActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		mediaPlayer.release();
-		mediaPlayer = null;
+		if (mediaPlayer != null) {
+			mediaPlayer.release();
+			mediaPlayer = null;
+		}
 	}
 
 	private void moveToNext() {
@@ -104,9 +105,17 @@ public class AutoPlayActivity extends Activity {
 		final TextView logTV = (TextView) findViewById(R.id.wordDefTextView);
 
 		final ScrollView logTVScroll = (ScrollView) findViewById(R.id.scrollView1);
+		boolean loadSuccessful = false;
+		String failMsg = null;
 
 		protected void onProgressUpdate(String... msg) {
 			if (msg[0] == null) {
+				if (!loadSuccessful) {
+					Toast.makeText(AutoPlayActivity.this, failMsg,
+							Toast.LENGTH_LONG).show();
+					finish();
+					return;
+				}
 				handler = new Handler();
 				curIndex = -1;
 				moveToNext();
@@ -118,25 +127,22 @@ public class AutoPlayActivity extends Activity {
 
 		@Override
 		protected Void doInBackground(Void... arg0) {
-			if (!loadAudio()) {
-				Toast.makeText(AutoPlayActivity.this,
-						"no audio data available", Toast.LENGTH_LONG).show();
-				finish();
-				return null;
-			}
+			loadAudio();
+			if (!loadSuccessful && failMsg == null)
+				failMsg = "no audio data available";
 			publishProgress((String) null);
 			return null;
 		}
 
-		private boolean loadAudio() {
+		private void loadAudio() {
+			loadSuccessful = false;
 			mediaPlayer = null;
 			File dataDir = new File(Environment.getExternalStorageDirectory()
 					.getAbsoluteFile() + "/wordbar");
 			if (!dataDir.isDirectory())
-				return false;
+				return;
 			FileInputStream mapFile = null;
 			BufferedReader rd = null;
-			boolean successful = false;
 			try {
 				publishProgress("loading audio ...");
 				audioFile = new FileInputStream(dataDir.getAbsolutePath()
@@ -146,27 +152,44 @@ public class AutoPlayActivity extends Activity {
 				mediaPlayer.prepare();
 
 				publishProgress("loading word offset map ...");
+				String[] word = new String[wordList.size()];
+				{
+					int p = 0;
+					for (Word w : wordList)
+						word[p ++] = w.spell;
+				}
+				Arrays.sort(word);
 				mapFile = new FileInputStream(dataDir.getAbsolutePath()
-						+ "/map.json");
+						+ "/map.txt");
 				rd = new BufferedReader(new InputStreamReader(mapFile));
 				wordChunkMap = new TreeMap<String, AutoPlayActivity.FileChunk>();
-				JSONObject json = new JSONObject(rd.readLine());
-				for (Word w : wordList) {
-					JSONArray array = json.getJSONArray(w.spell);
-					if (array == null) {
-						Toast.makeText(AutoPlayActivity.this,
-								"no audio for word " + w.spell,
-								Toast.LENGTH_LONG).show();
-						return false;
+
+				for (String w : word) {
+					for (;;) {
+						String line = rd.readLine();
+						if (line == null) {
+							failMsg = "no word" + w;
+							return;
+						}
+
+						Scanner sc = new Scanner(line);
+						String cur_word = sc.next();
+						if (cur_word.equals(w)) {
+							int s, l, d;
+							s = sc.nextInt();
+							l = sc.nextInt();
+							d = sc.nextInt();
+							wordChunkMap.put(w, new FileChunk(s, l, d));
+							break;
+						}
 					}
-					wordChunkMap.put(w.spell, new FileChunk(array.getInt(0),
-							array.getInt(1), array.getInt(2)));
 				}
-				successful = true;
-				return true;
+
+				loadSuccessful = true;
+				return;
 			} catch (Exception exc) {
+				failMsg = "failed to load audio: caught exception: " + exc.toString();
 				exc.printStackTrace();
-				return false;
 			} finally {
 				if (rd != null) {
 					try {
@@ -182,7 +205,7 @@ public class AutoPlayActivity extends Activity {
 						e.printStackTrace();
 					}
 				}
-				if (!successful) {
+				if (!loadSuccessful) {
 					try {
 						audioFile.close();
 					} catch (IOException e) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # $File: mkaudio.py
-# $Date: Mon Sep 23 09:06:51 2013 +0800
+# $Date: Mon Sep 23 11:16:38 2013 +0800
 # $Author: jiakai <jia.kai66@gmail.com>
 
 from libphonetic import get_phonetic
@@ -20,9 +20,8 @@ def system_with_exc(cmd):
         raise RuntimeError('failed to exec {}'.format(cmd))
 
 class AudioMaker(object):
-    TTS_BAD_CHAR_RE = [
-            re.compile('[a-zA-Z,.]+'),
-            re.compile(ur'[（(][^)）]*[)）]')]
+    TTS_RE_REMOVE = [re.compile(ur'[（(][^)）]*[)）]')]
+    TTS_RE_SPACE = [re.compile(u'[\x01-~]+'), re.compile(u'\s+')]
     temp_wav = None
     temp_ogg = None
     samplerate = 22050
@@ -55,7 +54,10 @@ class AudioMaker(object):
                 faudio_tot_len += len(audio)
 
         with open(fpath_map, 'w') as fout:
-            fout.write(json.dumps(audio_map))
+            audio_map = [(i, j) for i, j in audio_map.iteritems()]
+            audio_map.sort()
+            for i, j in audio_map:
+                print >>fout, i, j[0], j[1], j[2]
 
 
     def __del__(self):
@@ -70,18 +72,23 @@ class AudioMaker(object):
 
     def load_temp_wav(self):
         fs, data = wavfile.read(self.temp_wav)
-        assert len(data.shape) == 1 and fs == self.samplerate
+        assert len(data.shape) == 1 and fs == self.samplerate and len(data)
         data -= np.average(data)
+        assert np.var(data)
         return np.int16(data * (self.normalize_var / np.sqrt(np.var(data))))
 
     @classmethod
     def get_tts_text(cls, text):
-        for i in cls.TTS_BAD_CHAR_RE:
-            text = u''.join(i.split(text))
-        return text.replace('\n', ' ')
+        for i in cls.TTS_RE_REMOVE:
+            text = i.sub('', text)
+        for i in cls.TTS_RE_SPACE:
+            text = i.sub(' ', text)
+        return text.strip().replace(' ', u'；')
 
     def run_tts(self, text):
         text = self.get_tts_text(text)
+        assert text
+        print text
         system_with_exc(u'espeak -v zh "{}" -w {} 2>/dev/null'.format(
             text, self.temp_wav).encode('utf-8'))
         return self.load_temp_wav()

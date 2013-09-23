@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # $File: convert.py
-# $Date: Sun Sep 22 21:04:42 2013 +0800
+# $Date: Mon Sep 23 11:08:40 2013 +0800
 # $Author: jiakai <jia.kai66@gmail.com>
 
 import re
@@ -17,9 +17,9 @@ from libphonetic import get_phonetic
 
 class Loader(object):
     word_re = re.compile(ur'^([a-z-]+)\s+\[.*\].*$', re.MULTILINE  | re.UNICODE)
-    single_definition_re = re.compile(ur'【考.* [0-9]+】\s*(.*)$', re.MULTILINE)
+    single_definition_re = re.compile(ur'【考[^】]*】\s*(.*)$', re.MULTILINE)
     example_re = re.compile(ur'【例】([a-zA-Z /,.;]*)')
-    english_re = re.compile(ur"([a-zA-Z]+[a-zA-Z ;:,./()-_=+#$%，。']*)")
+    english_re = re.compile(ur"([a-zA-Z]+[a-zA-Z ;:,./()-_=+#$%，。'’]*)")
 
     word_list = None
     # dict word => definition
@@ -35,6 +35,14 @@ class Loader(object):
             brief, detail = self.extract_definition(i, j)
             self.word_list[i] = detail
             self.brief_word_list[i] = brief
+
+        if False:
+            for i, j in self.word_list.iteritems():
+                print i, j
+                print '==='
+            for i, j in self.brief_word_list.iteritems():
+                print i, j
+                print '==='
         print 'read {} words'.format(len(self.word_list))
 
     def extrac_re_split_pair(self, re_split_rst, start = 1):
@@ -43,10 +51,14 @@ class Loader(object):
 
     def extract_definition(self, word, text):
         """:return: brief, detailed"""
+        text = u' '.join(text.split('\n'))
+        text = u'\n【'.join(text.split(u'【'))
         to_remove_in_chn = re.compile(ur'[：；\s]+')
         def split_lexical_category(s):
             s = s.strip()
-            p = s.find('.') + 1
+            p = 0
+            while ord(s[p]) in range(0, 128):
+                p += 1
             return s[:p], s[p:]
 
         brief = list()
@@ -54,7 +66,8 @@ class Loader(object):
         parts = self.single_definition_re.split(text)
         idx = 0
         for idx, (definition, extra) in \
-                enumerate(self.extrac_re_split_pair(self.single_definition_re.split(text))):
+                enumerate(self.extrac_re_split_pair(
+                    self.single_definition_re.split(text))):
             lex_cat, definition = split_lexical_category(definition)
             chn = list()
             eng = list()
@@ -65,12 +78,13 @@ class Loader(object):
                     continue
                 j = j.replace(u'，', ',').replace(u'。', '.')
                 j = j.strip()
+                j = re.sub(r'\s+', ' ', j)
                 chn.append(i)
                 eng.append(j)
-            chn = lex_cat + u'；'.join(chn)
+            chn = u'；'.join(chn)
             eng = u';'.join(eng)
-            brief.append(chn)
-            cur_detail = u'[{}:{}]{}'.format(idx + 1, chn[chn.find('.')+1:], eng)
+            brief.append(lex_cat + chn)
+            cur_detail = u'[{}:{}]{}'.format(idx + 1, chn, eng)
             s = self.example_re.search(extra)
             if s:
                 cur_detail += u' 例:{}'.format(s.group(1).strip())
@@ -79,7 +93,7 @@ class Loader(object):
         if idx > 10:
             print u'warning: {} definitions'.format(idx)
 
-        return u'\n'.join(brief), \
+        return u' '.join(brief), \
                 u'\n'.join([u'[{}]'.format(get_phonetic(word)[0])] +
                         brief + detail)
 
