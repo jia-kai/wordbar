@@ -24,29 +24,31 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class AutoPlayActivity extends Activity {
-	private static final class TimeInterval {
-		final int start, end; // in milliseconds
+	private static final class FileChunk {
+		final int start, length, duration; // in milliseconds
 
-		public TimeInterval(int s, int e) {
+		public FileChunk(int s, int l, int d) {
 			start = s;
-			end = e;
+			length = l;
+			duration = d;
 		}
 	}
 
 	ArrayList<Word> wordList;
 	int curIndex;
 	MediaPlayer mediaPlayer;
-	TreeMap<String, TimeInterval> timeMap;
+	TreeMap<String, FileChunk> wordChunkMap;
 	FileInputStream audioFile = null;
 	Handler handler;
 	int curEndTime;
 	final Runnable stopAudioAndMoveToNext = new Runnable() {
 		@Override
 		public void run() {
-			if (mediaPlayer.isPlaying()) {
-				while (mediaPlayer.getCurrentPosition() < curEndTime)
-					continue;
-				mediaPlayer.pause();
+			if (mediaPlayer == null)
+				return;
+			try {
+				mediaPlayer.stop();
+			} catch (Exception ex) {
 			}
 			moveToNext();
 		}
@@ -65,15 +67,16 @@ public class AutoPlayActivity extends Activity {
 		}
 		(new Loader()).execute();
 	}
-	
+
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		handler = null;
+		mediaPlayer.release();
+		mediaPlayer = null;
 	}
 
 	private void moveToNext() {
-		if (handler == null)
+		if (mediaPlayer == null)
 			return;
 		curIndex++;
 		if (curIndex >= wordList.size())
@@ -81,11 +84,20 @@ public class AutoPlayActivity extends Activity {
 		Word w = wordList.get(curIndex);
 		((TextView) findViewById(R.id.wordTitleTextView)).setText(w.spell);
 		((TextView) findViewById(R.id.wordDefTextView)).setText(w.definition);
-		TimeInterval time = timeMap.get(w.spell);
-		mediaPlayer.seekTo(time.start);
+		FileChunk chunk = wordChunkMap.get(w.spell);
+		mediaPlayer.reset();
+		try {
+			mediaPlayer.setDataSource(audioFile.getFD(), chunk.start,
+					chunk.length);
+			mediaPlayer.prepare();
+		} catch (Exception e) {
+			e.printStackTrace();
+			Toast.makeText(this, "error", Toast.LENGTH_LONG).show();
+			finish();
+			return;
+		}
 		mediaPlayer.start();
-		curEndTime = time.end;
-		handler.postDelayed(stopAudioAndMoveToNext, time.end - mediaPlayer.getCurrentPosition());
+		handler.postDelayed(stopAudioAndMoveToNext, chunk.duration);
 	}
 
 	private class Loader extends AsyncTask<Void, String, Void> {
@@ -137,7 +149,7 @@ public class AutoPlayActivity extends Activity {
 				mapFile = new FileInputStream(dataDir.getAbsolutePath()
 						+ "/map.json");
 				rd = new BufferedReader(new InputStreamReader(mapFile));
-				timeMap = new TreeMap<String, AutoPlayActivity.TimeInterval>();
+				wordChunkMap = new TreeMap<String, AutoPlayActivity.FileChunk>();
 				JSONObject json = new JSONObject(rd.readLine());
 				for (Word w : wordList) {
 					JSONArray array = json.getJSONArray(w.spell);
@@ -147,9 +159,8 @@ public class AutoPlayActivity extends Activity {
 								Toast.LENGTH_LONG).show();
 						return false;
 					}
-					timeMap.put(w.spell,
-							new TimeInterval((int) (array.getDouble(0) * 1000),
-									(int) array.getDouble(1) * 1000));
+					wordChunkMap.put(w.spell, new FileChunk(array.getInt(0),
+							array.getInt(1), array.getInt(2)));
 				}
 				successful = true;
 				return true;

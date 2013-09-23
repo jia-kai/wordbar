@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # $File: mkaudio.py
-# $Date: Sun Sep 22 21:47:10 2013 +0800
+# $Date: Mon Sep 23 09:06:51 2013 +0800
 # $Author: jiakai <jia.kai66@gmail.com>
 
 from libphonetic import get_phonetic
@@ -20,35 +20,47 @@ def system_with_exc(cmd):
         raise RuntimeError('failed to exec {}'.format(cmd))
 
 class AudioMaker(object):
-    TTS_BAD_CHAR_RE = re.compile('[a-zA-Z,.]+')
+    TTS_BAD_CHAR_RE = [
+            re.compile('[a-zA-Z,.]+'),
+            re.compile(ur'[（(][^)）]*[)）]')]
     temp_wav = None
+    temp_ogg = None
     samplerate = 22050
     normalize_var = 2000
 
     def __init__(self, wordlist, fpath_map, fpath_audio):
         fd, self.temp_wav = tempfile.mkstemp(suffix = '.wav')
         os.close(fd)
+        fd, self.temp_ogg = tempfile.mkstemp(suffix = '.ogg')
+        os.close(fd)
         sep = np.zeros((self.samplerate * 0.2,), dtype = 'int16')
-        audio = np.zeros((0, ), dtype = 'int16')
-        audio_map = dict()  # word => (start time, end time)
-        for word_text, definition_text in wordlist:
-            print word_text
-            word = self.load_word_audio(word_text)
-            definition = self.run_tts(definition_text)
-            cur = np.concatenate([word, sep, definition])
-            start = len(audio)
-            audio.resize(len(audio) + len(cur))
-            audio[-len(cur):] = cur
-            audio_map[word_text] = (start / float(self.samplerate),
-                    len(audio) / float(self.samplerate))
-        wavfile.write(fpath_audio, self.samplerate, audio)
+        audio_map = dict()
+        # word => (begin offset, length, duration in milliseconds)
+        faudio_tot_len = 0
+        with open(fpath_audio, 'w') as faudio:
+            for word_text, definition_text in wordlist:
+                print word_text
+                word = self.load_word_audio(word_text)
+                definition = self.run_tts(definition_text)
+                audio_raw = np.concatenate([word, sep, definition])
+                wavfile.write(self.temp_wav, self.samplerate, audio_raw)
+                system_with_exc('oggenc {} -q -1 --resample 11000 -Q -o {}'.format(
+                    self.temp_wav, self.temp_ogg))
+
+                with open(self.temp_ogg) as fin:
+                    audio = fin.read()
+                faudio.write(audio)
+                audio_map[word_text] = (faudio_tot_len, len(audio),
+                        int(len(audio_raw) / float(self.samplerate) * 1000))
+                faudio_tot_len += len(audio)
 
         with open(fpath_map, 'w') as fout:
             fout.write(json.dumps(audio_map))
 
 
     def __del__(self):
-        os.unlink(self.temp_wav)
+        #os.unlink(self.temp_wav)
+        os.unlink(self.temp_ogg)
 
     def load_word_audio(self, word):
         text, fpath = get_phonetic(word)
@@ -60,11 +72,16 @@ class AudioMaker(object):
         fs, data = wavfile.read(self.temp_wav)
         assert len(data.shape) == 1 and fs == self.samplerate
         data -= np.average(data)
-        return data * (self.normalize_var / np.sqrt(np.var(data)))
+        return np.int16(data * (self.normalize_var / np.sqrt(np.var(data))))
+
+    @classmethod
+    def get_tts_text(cls, text):
+        for i in cls.TTS_BAD_CHAR_RE:
+            text = u''.join(i.split(text))
+        return text.replace('\n', ' ')
 
     def run_tts(self, text):
-        text = u''.join(self.TTS_BAD_CHAR_RE.split(text))
-        text = text.replace('\n', ' ')
+        text = self.get_tts_text(text)
         system_with_exc(u'espeak -v zh "{}" -w {} 2>/dev/null'.format(
             text, self.temp_wav).encode('utf-8'))
         return self.load_temp_wav()
