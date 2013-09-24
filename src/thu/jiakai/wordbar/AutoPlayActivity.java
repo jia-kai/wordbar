@@ -10,7 +10,6 @@ import java.util.TreeMap;
 
 import org.json.JSONArray;
 
-import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -26,7 +25,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class AutoPlayActivity extends Activity {
+public class AutoPlayActivity extends WBActivity {
 	private static final class FileChunk {
 		final int offset, length, duration; // in milliseconds
 
@@ -68,6 +67,7 @@ public class AutoPlayActivity extends Activity {
 			this.finish();
 			return;
 		}
+		((TextView) findViewById(R.id.wordDefTextView)).setTypeface(fontType);
 		(new Loader()).execute();
 	}
 

@@ -2,13 +2,12 @@ package thu.jiakai.wordbar;
 
 import java.util.ArrayList;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class ReviewActivity extends Activity {
+public class ReviewActivity extends WBActivity {
 	Word curWord;
 	ArrayList<Word> wordList;
 	int wordIndex = -1;
@@ -17,6 +16,8 @@ public class ReviewActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_review);
+		((TextView) findViewById(R.id.wordDefTextView)).setTypeface(fontType);
+		
 		wordList = MemoryModel.getWordsToReview();
 		Utils.randomShuffle(wordList);
 		wordIndex = -1;

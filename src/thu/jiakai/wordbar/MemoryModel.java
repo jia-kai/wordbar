@@ -22,7 +22,6 @@ public class MemoryModel {
 	}
 
 	public static ArrayList<Word> getWordsToReview() {
-		WordStorage.start();
 		ArrayList<Word> rst = new ArrayList<Word>();
 		Cursor cursor = WordStorage.dbRead.rawQuery(String.format(
 				"SELECT * FROM `words` WHERE nextReviewTime <= %d",

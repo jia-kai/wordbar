@@ -1,12 +1,11 @@
 package thu.jiakai.wordbar;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class ExploreActivity extends Activity {
+public class ExploreActivity extends WBActivity {
 	private Word curWord;
 	private EditText wordIDET;
 
@@ -16,6 +15,8 @@ public class ExploreActivity extends Activity {
 		setContentView(R.layout.activity_explore);
 		wordIDET = (EditText) findViewById(R.id.wordIDEditText);
 		setCurWord(WordStorage.getFirtNewWord());
+		
+		((TextView) findViewById(R.id.wordDefTextView)).setTypeface(fontType);
 	}
 
 	private void setCurWord(Word w) {

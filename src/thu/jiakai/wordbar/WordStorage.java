@@ -45,13 +45,19 @@ public class WordStorage {
 		}
 	}
 
-	static DBOpenHelper dbHelper;
+	static DBOpenHelper dbHelper = null;
 	static SQLiteDatabase dbRead = null, dbWrite = null;
 
-	public static void init(final Context ctx, final ScrollView logTVScroll,
-			final TextView logTV) {
+	public static void init(Context ctx) {
+		if (dbHelper != null)
+			return;
 		dbHelper = new DBOpenHelper(ctx);
-		start();
+		dbRead = dbHelper.getReadableDatabase();
+		dbWrite = dbHelper.getWritableDatabase();
+	}
+
+	public static void buildDB(final Context ctx, final ScrollView logTVScroll,
+			final TextView logTV) {
 
 		new AsyncTask<Void, String, Void>() {
 
@@ -108,20 +114,15 @@ public class WordStorage {
 		}.execute();
 	}
 
-	public static void start() {
-		if (dbRead == null) {
-			dbRead = dbHelper.getReadableDatabase();
-			dbWrite = dbHelper.getWritableDatabase();
-		}
-	}
-
-	public static void stop() {
-		if (dbRead == null && dbWrite == null)
+	public static void release() {
+		if (dbHelper == null)
 			return;
 		dbRead.close();
 		dbWrite.close();
+		dbHelper.close();
 		dbRead = null;
 		dbWrite = null;
+		dbHelper = null;
 	}
 
 	public static int getNrWord() {
